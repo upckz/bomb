@@ -70,11 +70,13 @@ app.post('/webhook', (req, res) => {
                 fbinfo.addDataToMysql(sender_psid);
 
                 if (webhook_event.game_play) {
-                    logger.info('GamePlay: ', +sender_psid);
+                   
 
                     let game_id = webhook_event.game_play.game_id;
                     let player_id = webhook_event.game_play.player_id;
-                    gameinfo.addGameInfoToMysql(sender_psid, game_id, player_id);
+                    gameinfo.addGameInfoToMysql(sender_psid, player_id);
+
+                    logger.info('GamePlay: ', + player_id);
 
                 }
 
