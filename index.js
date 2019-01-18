@@ -13,6 +13,11 @@ const
     app = express().use(bodyParser.json()); // creates express http server
 
 
+var Mysql = require('./bombGameInfo');
+let ss_mysql = new Mysql();
+let gameinfo = new ss_mysql.UserGameInfoMysql();
+let fbinfo = new ss_mysql.UserInfoMysql();
+
 Math.seed = function(s) {
     var m_w = s;
     var m_z = 987654321;
@@ -32,7 +37,6 @@ Math.seed = function(s) {
 var myRandomFunction = Math.seed(1234);
 
 
-connection = connectMysql();
 
 //app.use(log4js.connectLogger(log4js.getLogger("webhook"), { level: 'debug' }));
 
@@ -48,7 +52,7 @@ app.post('/webhook', (req, res) => {
 
     let str = JSON.stringify(body);
 
-    logger.info('message sent!  '+str)
+    logger.info('message sent!  ' + str)
     // Checks this is an event from a page subscription
     if (body.object === 'page') {
 
@@ -60,11 +64,18 @@ app.post('/webhook', (req, res) => {
             let webhook_event = entry.messaging[0];
 
             // Get the sender PSID
-            if ( webhook_event.sender) {
+            if (webhook_event.sender) {
                 let sender_psid = webhook_event.sender.id;
                 logger.info('Sender PSID: ' + sender_psid);
+                fbinfo.addDataToMysql(sender_psid);
+
                 if (webhook_event.game_play) {
-                    logger.info('GamePlay: ', + sender_psid);
+                    logger.info('GamePlay: ', +sender_psid);
+
+                    let game_id = webhook_event.game_play.game_id;
+                    let player_id = webhook_event.game_play.player_id;
+                    gameinfo.addGameInfoToMysql(sender_psid, game_id, player_id);
+
                 }
 
                 if (webhook_event.message) {
@@ -73,6 +84,7 @@ app.post('/webhook', (req, res) => {
                     handlePostback(sender_psid, webhook_event.postback);
                 }
             }
+
         });
 
         // Returns a '200 OK' response to all requests
@@ -115,83 +127,23 @@ app.get('/webhook', (req, res) => {
 // Handles messages events
 function handleMessage(sender_psid, received_message) {
 
-    let response;
-
+    let index = myRandomFunction() % 10;
     // Check if the message contains text
-    /*if (received_message.text) {
+    if (received_message.text) {
 
         // Create the payload for a basic text message
-        response = {
-            "text": `You sent the message: "${received_message.text}". Now send me an image!`
+        sendMsg(sender_psid);
+        if (index < 5) {
+            sendImg(sender_psid);
         }
+
     } else if (received_message.attachments) {
 
-        var img_url = "https://bit.ly/2RZsm0B";
-        var index =  myRandomFunction()%3;
-        if (index  == 1) {
-          img_url = "https://bit.ly/2FE48lI";
-        } else if (index == 2)  {
-           img_url = "https://bit.ly/2QR8l7L";
-        }
-
-        // Gets the URL of the message attachment
-        let attachment_url = received_message.attachments[0].payload.url;
-        response = {
-            "attachment": {
-                "type": "template",
-                "payload": {
-                    "template_type": "generic",
-                    "elements": [{
-                        "title": "A new mission has come!",
-                        "subtitle": "minesweeperzone",
-                        "image_url": img_url,
-                        "buttons": [{
-                               "type":"game_play",
-                                "title":"Play",
-                                "payload":"{test}",
-                                "game_metadata": { // Only one of the below
-                                  "player_id": sender_psid,
-                                }
-                            },
-                        ],
-                    }]
-                }
-            }
-        }
-    }*/
-
-    var img_url = "https://bit.ly/2RZsm0B";
-    var index = myRandomFunction() % 3;
-    if (index == 1) {
-        img_url = "https://bit.ly/2FE48lI";
-    } else if (index == 2) {
-        img_url = "https://bit.ly/2QR8l7L";
-    }
-
-    // Gets the URL of the message attachment
-    //let attachment_url = received_message.attachments[0].payload.url;
-    response = {
-        "attachment": {
-            "type": "template",
-            "payload": {
-                "template_type": "button",
-                "text": "Try the game play button!",
-                "buttons": [{
-                    "type": "game_play",
-                    "title": "Play",
-                    "payload": "SERIALIZED_JSON_PAYLOAD",
-                    "game_metadata": {
-                        "player_id": "4590736473645"
-                    }
-                }]
-            }
+        sendImg(sender_psid);
+        if (index < 5) {
+            sendMsg(sender_psid);
         }
     }
-
-    // logger.info(response);
-    // Sends the response message
-    callSendAPI(sender_psid, response);
-
 }
 
 // Handles messaging_postbacks events
@@ -239,25 +191,48 @@ function callSendAPI(sender_psid, response) {
 
 }
 
-function connectMysql()
-{
-  var mysql      = require('mysql');
-  var connection = mysql.createConnection({
-    host     : 'localhost',
-    user     : 'root',
-    password : '******',
-    database : 'bomb'
-  });
-   
-  connection.connect();
-  return connection;
+function sendMsg(sender_psid) {
+    let response;
+    response = {
+        "text": "Welcome, commander! I am your mine hunter! Any service please leave a message!",
+    }
+    callSendAPI(sender_psid, response);
 }
 
-function addDataToMysql(sender_psid) {
-  let time = Date.now();
-  let sql = 'SELECT * FROM userinfo where senderid'
+function sendImg(sender_psid) {
+    let response;
+    let img_url = "https://bit.ly/2RZsm0B";
+    let index = myRandomFunction() % 3;
+    if (index == 1) {
+        img_url = "https://bit.ly/2FE48lI";
+    } else if (index == 2) {
+        img_url = "https://bit.ly/2QR8l7L";
+    }
 
-
-  var  addSql = 'UPDATE  userinfo(senderid) VALUES(?)';
-  
+    // Gets the URL of the message attachment
+    response = {
+        "attachment": {
+            "type": "template",
+            "payload": {
+                "template_type": "generic",
+                "elements": [{
+                    "title": "Warning！New mission is coming!!",
+                    "subtitle": "minesweeperzone",
+                    "image_url": img_url,
+                    "buttons": [{
+                            "type": "postback",
+                            "title": "Yes!",
+                            "payload": "yes",
+                        },
+                        {
+                            "type": "postback",
+                            "title": "No!",
+                            "payload": "no",
+                        }
+                    ],
+                }]
+            }
+        }
+    }
+    callSendAPI(sender_psid, response);
 }
