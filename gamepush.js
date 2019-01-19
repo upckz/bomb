@@ -48,11 +48,11 @@ function PushGameToUser(result) {
      for (var i = 0; i < result.length; i++)
      {
         if (result[i].updatetime < time) {
-
             let keys = "f_"+result[i].player_id;
             let player_id = result[i].player_id;
             let senderid = result[i].senderid;
             client.hgetall(keys, function(err, object) {
+
                if (object != null) {
                     if (object.count < 3 && object.time < time) {
                       addPushCount(keys, object.count+1);
@@ -67,7 +67,6 @@ function PushGameToUser(result) {
             })
         }
      }
-    //process.exit();
 }
 
 
@@ -117,10 +116,9 @@ function sendCallbackUser(senderid, player_id) {
             }
         }
     }
-    let str = JSON.stringify(response);
-    //console.log("%s", str);
-    logger.debug(str);
-    //callSendAPI(senderid, response);
+
+    logger.debug("gamepush: senderid="+senderid + " player_id=" + player_id);
+    callSendAPI(senderid, response);
 }
 
 // Sends response messages via the Send API
