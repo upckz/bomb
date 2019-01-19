@@ -36,6 +36,49 @@ Math.seed = function(s) {
 
 var myRandomFunction = Math.seed(1234);
 
+var redis = require('redis');
+var client = redis.createClient(4510,'10.148.0.2');
+
+
+//sendCallbackUser(1990710367711069,2003951882985887);
+
+
+function PushGameToUser(result) {
+    let time = Math.round(new Date() / 1000)-86400;
+     for (var i = 0; i < result.length; i++)
+     {
+        if (result[i].updatetime < time) {
+
+            let keys = "f_"+result[i].player_id;
+            let player_id = result[i].player_id;
+            let senderid = result[i].senderid;
+            client.hgetall(keys, function(err, object) {
+               if (object != null) {
+                    if (object.count < 3 && object.time < time) {
+                      addPushCount(keys, object.count+1);
+                      sendCallbackUser(senderid, player_id);
+                    }  else {
+                         //console.log("%d %s",i,keys);
+                    }
+                } else {
+                    addPushCount(keys,1);
+                    sendCallbackUser(senderid,player_id);
+                }
+            })
+        }
+     }
+    //process.exit();
+}
+
+
+function addPushCount(keys, count) {
+    let time = Math.round(new Date() / 1000);
+    client.hmset(keys, {'count': count, 'time': time});
+    client.expire(keys, 10*86400)
+}
+
+
+
 function sendCallbackUser(senderid, player_id) {
 
     let response;
@@ -74,8 +117,10 @@ function sendCallbackUser(senderid, player_id) {
             }
         }
     }
-
-    callSendAPI(senderid, response);
+    let str = JSON.stringify(response);
+    //console.log("%s", str);
+    logger.debug(str);
+    //callSendAPI(senderid, response);
 }
 
 // Sends response messages via the Send API
@@ -106,5 +151,14 @@ function callSendAPI(sender_psid, response) {
     });
 
 }
+
+function run(){
+    let time = Math.round(new Date() / 1000)-86400;
+    gameinfo.selectUsertoPush(time, PushGameToUser);  
+}
+
+//logger.info('start gamepush.....................');
+setInterval(run, 1000*10800);
+//setInterval(run, 1000);
 
 //sendCallbackUser(1990710367711069, 2003951882985887);

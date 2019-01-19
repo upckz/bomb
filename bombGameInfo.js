@@ -58,12 +58,11 @@ function Mysql() {
 
         this.selectUsertoPush = function(time, callback) {
    
-            let sql = 'SELECT * FROM gameinfo where updatetime < ' + time;
+            let sql = 'SELECT senderid, player_id,updatetime FROM gameinfo where updatetime < ' + time + ' ORDER BY updatetime ASC';
             connection.query(sql, function(err, result, fields) {
                 if (err) {
                     console.log("err:-", err.message);
                 } else {
-                   
                     callback(result);
                 }
             });
